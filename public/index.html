@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload to GitHub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body style="display: flex; flex-direction: column; gap: 4rem;padding: 2rem;">
+
+    <div>
+        <h1>Upload Image to GitHub</h1>
+        <form id="uploadForm">
+            <label for="file">Select an image:</label>
+            <input type="file" id="file" name="file" accept="image/*" required>
+            <button type="submit" class="">Upload</button>
+
+        </form>
+        <div id="result" style="display:none;">
+            <h2>Uploaded Successfully!</h2>
+            <a id="publicUrl" href="#" target="_blank">View Image</a>
+        </div>
+    </div>
+
+    <div>
+        <table id="fileTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>URL</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <div>
+        <hr>
+        <h2 id="api-endpoints">API Endpoints</h2>
+        <h3 id="post-upload">POST /upload</h3>
+        <p>Uploads a file to the configured GitHub repository.</p>
+        <h4 id="request">Request</h4>
+        <ul>
+            <li><strong>Content-Type</strong>: <code>multipart/form-data</code></li>
+            <li><strong>Body</strong>: A form-data containing a file under the key <code>file</code>.</li>
+        </ul>
+        <h4 id="response">Response</h4>
+        <ul>
+            <li>
+                <p><strong>200 OK</strong>: If the file is successfully uploaded, returns the public URL of the uploaded
+                    file.
+                </p>
+                <pre><code class="lang-json">{
+  <span class="hljs-attr">"publicUrl"</span>: <span class="hljs-string">"https://raw.githubusercontent.com/&lt;repo&gt;/&lt;branch&gt;/uploads/&lt;file_name&gt;"</span>
+}
+</code></pre>
+            </li>
+            <li>
+                <p><strong>500 Internal Server Error</strong>: If the upload fails, an error message is returned.</p>
+                <pre><code class="lang-json">{
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">"Failed to upload the file"</span>
+}
+</code></pre>
+            </li>
+        </ul>
+        <hr>
+        <h3 id="get-files">GET /files</h3>
+        <p>Retrieves a list of all files uploaded to the GitHub repository.</p>
+        <h4 id="request">Request</h4>
+        <ul>
+            <li>No parameters are required.</li>
+        </ul>
+        <h4 id="response">Response</h4>
+        <ul>
+            <li>
+                <p><strong>200 OK</strong>: Returns a list of file names with their corresponding public URLs.</p>
+                <pre><code class="lang-json">[
+  {
+    <span class="hljs-attr">"name"</span>: <span class="hljs-string">"&lt;file_name&gt;"</span>,
+    <span class="hljs-attr">"url"</span>: <span class="hljs-string">"https://raw.githubusercontent.com/&lt;repo&gt;/&lt;branch&gt;/uploads/&lt;file_name&gt;"</span>
+  },
+  ...
+]
+</code></pre>
+            </li>
+            <li>
+                <p><strong>500 Internal Server Error</strong>: If there is an issue retrieving the file list, an error
+                    message
+                    is returned.</p>
+                <pre><code class="lang-json">{
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">"Failed to retrieve files"</span>
+}
+</code></pre>
+            </li>
+        </ul>
+        <hr>
+        <h3 id="delete-delete">DELETE /delete</h3>
+        <p>Deletes a file from the GitHub repository.</p>
+        <h4 id="request">Request</h4>
+        <ul>
+            <li>
+                <p><strong>Content-Type</strong>: <code>application/json</code></p>
+            </li>
+            <li>
+                <p><strong>Body</strong>: JSON object with the file name to be deleted.</p>
+                <pre><code class="lang-json">{
+  <span class="hljs-attr">"fileName"</span>: <span class="hljs-string">"&lt;file_name&gt;"</span>
+}
+</code></pre>
+            </li>
+        </ul>
+        <h4 id="response">Response</h4>
+        <ul>
+            <li>
+                <p><strong>200 OK</strong>: If the file is successfully deleted, returns a success message.</p>
+                <pre><code class="lang-json">{
+  <span class="hljs-attr">"message"</span>: <span class="hljs-string">"File \"&lt;file_name&gt;\" deleted successfully"</span>
+}
+</code></pre>
+            </li>
+            <li>
+                <p><strong>400 Bad Request</strong>: If the file name is not provided in the request body.</p>
+                <pre><code class="lang-json">{
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">"File name is required"</span>
+}
+</code></pre>
+            </li>
+            <li>
+                <p><strong>500 Internal Server Error</strong>: If there is an error deleting the file, an error message
+                    is
+                    returned.</p>
+                <pre><code class="lang-json">{
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">"Failed to delete the file"</span>
+}
+</code></pre>
+            </li>
+        </ul>
+        <hr>
+
+    </div>
+
+    <script>
+        const fileTableBody = document.querySelector('#fileTable tbody');
+        const resultDiv = document.querySelector('#result');
+        const publicUrlAnchor = document.querySelector('#publicUrl');
+        const uploadForm = document.querySelector('#uploadForm');
+
+        // Utility function to refresh the file table
+        const refreshFileTable = () => {
+            fetch('http://localhost:3000/files')
+                .then(response => response.json())
+                .then(files => {
+                    fileTableBody.innerHTML = files.map(file => `
+                        <tr>
+                            <td>${file.name}</td>
+                            <td><a href="${file.url}" target="_blank">${file.url}</a></td>
+                            <td><button data-file-name="${file.name}">Delete</button></td>
+                        </tr>
+                    `).join('');
+                    // Add event listeners for delete buttons after populating the table
+                    fileTableBody.querySelectorAll('button').forEach(button => {
+                        button.addEventListener('click', handleDeleteFile);
+                    });
+                })
+                .catch(error => console.error('Error fetching files:', error));
+        };
+
+        // Handle file deletion
+        const handleDeleteFile = (event) => {
+            const fileName = event.target.dataset.fileName;
+            if (confirm(`Are you sure you want to delete "${fileName}"?`)) {
+                fetch('http://localhost:3000/delete', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fileName })
+                })
+                    .then(response => response.ok ? alert(`File "${fileName}" deleted successfully.`) : alert('Failed to delete the file.'))
+                    .then(() => refreshFileTable())
+                    .catch(error => console.error('Error deleting file:', error));
+            }
+        };
+
+        // Handle file upload
+        uploadForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const fileInput = document.querySelector('#file');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select a file!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const response = await fetch("http://localhost:3000/upload", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to upload the image.");
+                }
+
+                const data = await response.json();
+                publicUrlAnchor.href = data.publicUrl;
+                publicUrlAnchor.textContent = data.publicUrl;
+                resultDiv.style.display = 'block'; // Show result div
+                refreshFileTable(); // Refresh the file table
+            } catch (error) {
+                alert("An error occurred while uploading: " + error.message);
+            }
+        });
+
+        // Initial population of the table
+        document.addEventListener('DOMContentLoaded', refreshFileTable);
+
+    </script>
+</body>
+
+</html>
