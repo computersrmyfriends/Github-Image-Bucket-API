@@ -1,6 +1,8 @@
 
 # Github Image Bucket API
 
+![UI](UI.png)
+
 This project is a proof of concept for using a GitHub repository as an image hosting service. The API allows users to upload, list, and delete image files from the repository, providing an easy interface to manage files hosted on GitHub.
 
 ## Table of Contents
