@@ -214,6 +214,9 @@
                 publicUrlAnchor.href = data.publicUrl;
                 publicUrlAnchor.textContent = data.publicUrl;
                 resultDiv.style.display = 'block'; // Show result div
+                resultDiv.innerHTML = `<h2>Uploaded Successfully!</h2>
+                <a id="publicUrl" href="${data.publicUrl}" target="_blank">${data.publicUrl}</a>
+                `
                 refreshFileTable(); // Refresh the file table
             } catch (error) {
                 alert("An error occurred while uploading: " + error.message);
